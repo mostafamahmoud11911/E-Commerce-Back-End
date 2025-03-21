@@ -21,14 +21,46 @@ const port = process.env.PORT || 3000;
 app.post(
   "/api/webhook",
   express.raw({ type: "application/json" }),
-  catchError((req, res) => {
+  catchError(async (req, res) => {
     const sig = req.headers["stripe-signature"].toString();
 
-    let event = stripe.webhooks.constructEvent(req.body, sig, "whsec_FCu6084YlP7GeDndxYckkHnUkRdJUNOj");
+    let event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      "whsec_FCu6084YlP7GeDndxYckkHnUkRdJUNOj"
+    );
 
     let checkoutSession;
     if (event.type === "checkout.session.completed") {
       checkoutSession = event.data.object;
+
+      const cart = await Cart.findById(checkoutSession.client_reference_id);
+      if (!cart) next(new AppError("Cart is not found", 404));
+
+      let totalOrderPrice = cart.totalCartPrice || cart.priceAfterDiscount;
+
+      const user = await User.findOne({ email: checkoutSession.customer_email });
+      if (!user) next(new AppError("User is not found", 404));
+
+      const order = new Order({
+        user: user._id,
+        orderItems: cart.cartItems,
+        shippingAddress: checkoutSession.metadata,
+        totalOrderPrice: checkoutSession.amount_total / 100,
+        paymentType: "payment",
+        isPaid: true,
+      });
+
+      const item = cart.cartItems.map((item) => ({
+        updateOne: {
+          filter: { _id: item.product },
+          update: { $inc: { sold: item.quantity, stock: -item.quantity } },
+        },
+      }));
+
+      await Product.bulkWrite(item);
+      await order.save();
+      await Cart.findByIdAndDelete(cart._id);
     }
 
     res.json({ message: "success", checkoutSession });

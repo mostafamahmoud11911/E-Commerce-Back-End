@@ -4,7 +4,7 @@ import Order from "../models/orderModel.js";
 import Product from "../models/productModel.js";
 import AppError from "../utils/AppError.js";
 import Stripe from "stripe";
-const stripe = new Stripe("sk_test_51R46ZeBqAMghLALoebxctYb5J8R17y5h4PMfQ2o120ANzXzozdAmkjmyMmk1Ek8XKaK2F18ZsThSQq1yRPX22MRK00E9WrgIRa");
+const stripe = new Stripe("sk_test_51R5419ITLHpjXTKHqX3zUluiIGvY6CLpf8ymGYQVAKgXvIjBhCt6IQdn6YDAQDHzMMuwCaHzuLjtAj74Q8f8tfH400aHZzraQI");
 
 export const createCashOrder = catchError(async (req, res, next) => {
   const cart = await Cart.findById(req.params.id);
@@ -18,7 +18,7 @@ export const createCashOrder = catchError(async (req, res, next) => {
     shippingAddress: req.body.shippingAddress,
     totalOrderPrice,
     isPaid: true,
-    
+
   });
 
   const item = cart.cartItems.map((item) => ({

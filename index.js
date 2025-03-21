@@ -12,13 +12,28 @@ import Order from "./models/orderModel.js";
 import Product from "./models/productModel.js";
 import User from "./models/userModel.js";
 const stripe = new Stripe(
-  "sk_test_51R46ZeBqAMghLALoebxctYb5J8R17y5h4PMfQ2o120ANzXzozdAmkjmyMmk1Ek8XKaK2F18ZsThSQq1yRPX22MRK00E9WrgIRa"
+  "sk_test_51R5419ITLHpjXTKHqX3zUluiIGvY6CLpf8ymGYQVAKgXvIjBhCt6IQdn6YDAQDHzMMuwCaHzuLjtAj74Q8f8tfH400aHZzraQI"
 );
 
 const app = express();
 const port = process.env.PORT || 3000;
 
+app.post(
+  "/api/webhook",
+  express.raw({ type: "application/json" }),
+  catchError((req, res) => {
+    const sig = req.headers["stripe-signature"].toString();
 
+    let event = stripe.webhooks.constructEvent(req.body, sig, "whsec_FCu6084YlP7GeDndxYckkHnUkRdJUNOj");
+
+    let checkoutSession;
+    if (event.type === "checkout.session.completed") {
+      checkoutSession = event.data.object;
+    }
+
+    res.json({ message: "success", checkoutSession });
+  })
+);
 
 app.use(express.json());
 app.use(cors());
